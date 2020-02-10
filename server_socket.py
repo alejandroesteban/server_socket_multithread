@@ -141,10 +141,7 @@ class SocketServer():
             file.write(dt_string +','+data_decode+'\n') 
             
         with open(log_path, 'a') as file:
-            file.write(dt_string +','+data_decode+'\n')
-             
-        subprocess.call(["php", "/var/www/rabbit/admin/html/thingsend.php"])
-        
+            file.write(dt_string +','+data_decode+'\n')        
                        
 def main(ip='127.0.0.1',port=18000, folder_path='data'): 
     '''
