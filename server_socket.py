@@ -2,15 +2,19 @@ import os
 from datetime import datetime
 import socket 
 from threading import Thread
+import threading
 import time
 import argparse
 import multiprocessing as mp
 import thread
 import subprocess
 import codecs
+import traceback
+
 
        
-        
+print_lock = threading.Lock() 
+
 class SocketServer():
     '''
     This class creates a socket server and listens to messages on a specific ip and port.
@@ -38,6 +42,7 @@ class SocketServer():
         self.socket.setsockopt(socket.SOL_SOCKET, socket.SO_KEEPALIVE, 1)
         self.socket.bind((self.ip, self.port)) 
         self.socket.listen(5) 
+
         
         def run(self):
             print ("Server started")
@@ -57,45 +62,41 @@ class SocketServer():
         '''
         while 1:
             print("Multithreaded Python server : Waiting for connections in IP:", self.ip, " PORT:",self.port)
+            print_lock.acquire() 
             (clientsocket, address) = self.socket.accept()
-            clientsocket.setblocking(0)
+            clientsocket.settimeout(self.timer)
             #Adding client to clients list
             self.clients.append(clientsocket)
             #Client Connected
             self.onopen(clientsocket, address)
             #Receiving data from client
-            thread.start_new_thread(self.recieve, (clientsocket,address))
+            thread.start_new_thread(self.receive, (clientsocket,address))
             
-    def recieve(self, client, address):
+    def receive(self, client, address):
         '''
         Receive messages from client trough onmessage and onclose
         '''
-        max_buffer_size = 256
-        #Determine the time lapsed from first connection with same client, if time minour that timer return
-        tic = time.time()
-        while 1:
-            data_brute, port  = client.recvfrom(max_buffer_size)
-            #data_brute = client.recv(max_buffer_size)
-            toc = time.time() - tic
-            if not data_brute or toc > self.timer:
-                break   
-            #Message Received
-            self.onmessage(client, data_brute, address)
-        #Removing client from clients list
-        self.clients.remove(client)
-        #Client Disconnected
-        self.onclose(client,address, data_brute)
-        #Closing connection with client
-        client.close()
-        #Closing thread
-        thread.exit()
+        max_buffer_size = 1024
+        try:
+            while 1:
+                data_brute, port  = client.recvfrom(max_buffer_size)
+                if not data_brute:
+                    break   
+                else:
+                    #Message Received
+                    self.onmessage(client, data_brute, address)
+            self.onclose(client,address, data_brute)
+        except Exception:
+            traceback.print_exc()       
+            #Client Disconnected
+            self.onclose(client,address, data_brute)
+        
         
     def onopen(self, client, address):
         '''
         Trigger when new client connected.
         '''
         print ("[+] New server socket thread started for " + str(address))
-
 
     def onmessage(self, client, message, address):
         '''
@@ -110,7 +111,13 @@ class SocketServer():
         Trigger to print close connection with client.
         '''
         print("Close connection",address, data)
-        pass    
+        print_lock.release() 
+        #Removing client from clients list
+        self.clients.remove(client)
+        #Closing connection with client
+        client.close()
+        #Closing thread
+        thread.exit()    
     
     def save_data(self, addr, data):
         '''
@@ -128,6 +135,8 @@ class SocketServer():
         file_path = os.path.join(self.folder_path,'data.txt')
         log_path = os.path.join('log','log.txt')
         
+        data_decode = data
+        
         if not os.path.isdir(self.folder_path):
             os.makedirs(self.folder_path)
             
@@ -141,7 +150,10 @@ class SocketServer():
             file.write(dt_string +','+data_decode+'\n') 
             
         with open(log_path, 'a') as file:
-            file.write(dt_string +','+data_decode+'\n')        
+            file.write(dt_string +','+data_decode+'\n')
+             
+        #subprocess.call(["php", "/var/www/rabbit/admin/html/thingsend.php"])
+        
                        
 def main(ip='127.0.0.1',port=18000, folder_path='data'): 
     '''
