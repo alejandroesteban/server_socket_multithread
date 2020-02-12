@@ -23,4 +23,4 @@ $ python server_socket.py 127.0.0.1 8080
 ```
 
 # Licence
-[Licence](/master/LICENSE)
+[Licence](https://github.com/alejandroesteban/server_socket_multithread/blob/master/LICENSE)
