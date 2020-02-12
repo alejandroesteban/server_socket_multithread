@@ -21,7 +21,7 @@ class SocketServer():
     '''
     clients = []
     
-    def __init__(self, ip='127.0.0.1', port='8080', folder_path='data', timer=60):
+    def __init__(self, ip='127.0.0.1', port='8080', folder_path='data'):
         '''
         Parameters
         
@@ -36,8 +36,7 @@ class SocketServer():
         '''
         self.ip = ip
         self.port = port
-        self.folder_path = folder_path
-        self.timer = timer
+        self.timer = 60
         self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM) 
         self.socket.setsockopt(socket.SOL_SOCKET, socket.SO_KEEPALIVE, 1)
         self.socket.bind((self.ip, self.port)) 
@@ -132,28 +131,12 @@ class SocketServer():
             Data send from client to server.
         '''
         #Save data in txt and log adding lines to document.
-        file_path = os.path.join(self.folder_path,'data.txt')
-        log_path = os.path.join('log','log.txt')
-        
-        data_decode = data
-        
-        if not os.path.isdir(self.folder_path):
-            os.makedirs(self.folder_path)
-            
-        if not os.path.isdir('log'):
-            os.makedirs('log')
-        
+        file_path = os.path.join(self.folder_path,'data.txt')        
         now = datetime.now()
         dt_string = now.strftime("%d/%m/%Y %H:%M:%S")
-            
-        with open(file_path, 'w') as file:            
-            file.write(dt_string +','+data_decode+'\n') 
-            
-        with open(log_path, 'a') as file:
-            file.write(dt_string +','+data_decode+'\n')
-             
-        #subprocess.call(["php", "/var/www/rabbit/admin/html/thingsend.php"])
-        
+        with open(file_path, 'a') as file:            
+            file.write(dt_string +','+data+'\n') 
+      
                        
 def main(ip='127.0.0.1',port=18000, folder_path='data'): 
     '''
@@ -165,14 +148,13 @@ def main(ip='127.0.0.1',port=18000, folder_path='data'):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument('parameters',
-                        type=str, nargs=3,
-                        help='host, port and folder')
+                        type=str, nargs=2,
+                        help='host, port')
     args = parser.parse_args()
 
     ip = args.parameters[0]
     port = int(args.parameters[1])
-    folder_path = os.path.abspath(args.parameters[2])
-    
+
     server_process = mp.Process(name="{server_socket}",
                                  args=(ip, port, folder_path),
                                  target=main)
