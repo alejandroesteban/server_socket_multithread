@@ -21,7 +21,7 @@ class SocketServer():
     '''
     clients = []
     
-    def __init__(self, ip='127.0.0.1', port='8080', folder_path='data'):
+    def __init__(self, ip='127.0.0.1', port='8080', timer=60):
         '''
         Parameters
         
@@ -29,16 +29,14 @@ class SocketServer():
             Ip to receive messages with web socket.
         port: int
             Port to receive messages with web socket.
-        folder_path: string
-            Path to save messages received with web socket.
         timer: int
             Timer to wait to last messages or close connection with client.
         '''
         self.ip = ip
         self.port = port
-        self.timer = 60
+        self.timer = timer
         self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM) 
-        self.socket.setsockopt(socket.SOL_SOCKET, socket.SO_KEEPALIVE, 1)
+        self.socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         self.socket.bind((self.ip, self.port)) 
         self.socket.listen(5) 
 
@@ -75,6 +73,7 @@ class SocketServer():
         '''
         Receive messages from client trough onmessage and onclose
         '''
+        data_brute=''
         max_buffer_size = 1024
         try:
             while 1:
@@ -130,33 +129,37 @@ class SocketServer():
         data: bytes
             Data send from client to server.
         '''
-        #Save data in txt and log adding lines to document.
-        file_path = os.path.join(self.folder_path,'data.txt')        
+        #Save data  log adding lines to document.
+        log_path = os.path.join('log','log.txt')
+        
+        if not os.path.isdir('log'):
+            os.makedirs('log')
+        
         now = datetime.now()
         dt_string = now.strftime("%d/%m/%Y %H:%M:%S")
-        with open(file_path, 'a') as file:            
-            file.write(dt_string +','+data+'\n') 
-      
+            
+        with open(log_path, 'a') as file:
+            file.write(dt_string +','+data+'\n')        
                        
-def main(ip='127.0.0.1',port=18000, folder_path='data'): 
+def main(ip='127.0.0.1',port=18000): 
     '''
     Funtion principal to create object SocketServer from websocket.
     '''              
     # Multithreaded Python server : TCP Server Socket Program Stub
-    SocketServer(ip, port, folder_path)    
+    SocketServer(ip, port)    
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument('parameters',
                         type=str, nargs=2,
-                        help='host, port')
+                        help='ip, port')
     args = parser.parse_args()
 
     ip = args.parameters[0]
     port = int(args.parameters[1])
-
+    
     server_process = mp.Process(name="{server_socket}",
-                                 args=(ip, port, folder_path),
+                                 args=(ip, port),
                                  target=main)
     server_process.start()
 
